@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bollywood Recommender</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: #000000;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin: 40px 0 10px;
+            color: #ff0000;
+            text-shadow: 0 0 10px rgba(255,0,0,0.5);
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        /* Search Box */
+        .search-box {
+            max-width: 600px;
+            margin: 0 auto 30px;
+            display: flex;
+            gap: 10px;
+        }
+
+        #movieInput {
+            flex: 1;
+            padding: 15px 20px;
+            background: #111;
+            border: 2px solid #333;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        #movieInput:focus {
+            outline: none;
+            border-color: #ff0000;
+            box-shadow: 0 0 15px rgba(255,0,0,0.3);
+        }
+
+        button {
+            padding: 15px 30px;
+            background: #ff0000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #cc0000;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255,0,0,0.4);
+        }
+
+        /* Autocomplete */
+        .autocomplete {
+            position: relative;
+            max-width: 600px;
+            margin: -20px auto 20px;
+        }
+
+        .autocomplete-items {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .autocomplete-items div {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #222;
+        }
+
+        .autocomplete-items div:hover {
+            background: #ff0000;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top-color: #ff0000;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Results */
+        .results {
+            margin: 40px 0;
+            display: none;
+        }
+
+        .correction {
+            background: rgba(255,0,0,0.1);
+            border-left: 3px solid #ff0000;
+            padding: 12px 20px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+            color: #ff6666;
+        }
+
+        .movies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .movie-card {
+            background: #111;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #222;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .movie-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: #ff0000;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-5px);
+            border-color: #ff0000;
+            box-shadow: 0 10px 20px rgba(255,0,0,0.2);
+        }
+
+        .movie-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .movie-header h3 {
+            font-size: 1.2rem;
+            color: #fff;
+        }
+
+        .year {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .similarity {
+            background: #ff0000;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .movie-details p {
+            margin: 8px 0;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .movie-details span {
+            color: #ff6666;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+
+        /* Error */
+        .error {
+            text-align: center;
+            padding: 40px;
+            background: #111;
+            border-radius: 12px;
+            border: 1px solid #ff0000;
+            margin: 30px 0;
+            display: none;
+        }
+
+        .error-icon {
+            color: #ff0000;
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .suggestion-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .suggestion-buttons button {
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+
+        .suggestion-buttons button:hover {
+            background: #ff0000;
+            color: white;
+        }
+
+        /* Popular Movies */
+        .popular {
+            margin-top: 50px;
+        }
+
+        .popular h2 {
+            color: #ff0000;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .popular-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .popular-card {
+            background: #111;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #222;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .popular-card:hover {
+            border-color: #ff0000;
+            transform: scale(1.05);
+        }
+
+        .popular-card h4 {
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .popular-card p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #222;
+            color: #666;
+        }
+
+        .hidden { display: none; }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .search-box { flex-direction: column; }
+            .movies-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BOLLYWOOD RECOMMENDER</h1>
+        <p class="subtitle">Find movies similar to your favorites (2000-2025)</p>
+
+        <div class="search-box">
+            <input type="text" id="movieInput" placeholder="Enter movie name...">
+            <button onclick="searchMovie()">RECOMMEND</button>
+        </div>
+
+        <div class="autocomplete">
+            <div id="autocomplete" class="autocomplete-items"></div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Finding recommendations...</p>
+        </div>
+
+        <div id="results" class="results">
+            <div id="correction" class="correction"></div>
+            <div id="recommendations" class="movies-grid"></div>
+        </div>
+
+        <div id="error" class="error">
+            <div class="error-icon">⚠️</div>
+            <p id="errorMessage"></p>
+            <div id="suggestions" class="suggestion-buttons"></div>
+        </div>
+
+        <div class="popular">
+            <h2>Popular Movies</h2>
+            <div class="popular-grid">
+                {% for movie in popular %}
+                <div class="popular-card" onclick="searchSpecific('{{ movie.title }}')">
+                    <h4>{{ movie.title }}</h4>
+                    <p>{{ movie.year }} | {{ movie.director }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 Bollywood Recommender | 200+ Movies</p>
+        </footer>
+    </div>
+
+    <script>
+        let searchTimeout;
+
+        // Autocomplete
+        document.getElementById('movieInput').addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value;
+
+            if (query.length < 2) {
+                document.getElementById('autocomplete').style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                fetch(`/autocomplete?q=${query}`)
+                    .then(r => r.json())
+                    .then(movies => {
+                        const div = document.getElementById('autocomplete');
+                        if (movies.length) {
+                            div.innerHTML = movies.map(m =>
+                                `<div onclick="selectMovie('${m.replace(/'/g, "\\'")}')">${m}</div>`
+                            ).join('');
+                            div.style.display = 'block';
+                        } else {
+                            div.style.display = 'none';
+                        }
+                    });
+            }, 300);
+        });
+
+        function selectMovie(movie) {
+            document.getElementById('movieInput').value = movie;
+            document.getElementById('autocomplete').style.display = 'none';
+            searchMovie();
+        }
+
+        function searchSpecific(movie) {
+            document.getElementById('movieInput').value = movie;
+            searchMovie();
+        }
+
+        function searchMovie() {
+            const movie = document.getElementById('movieInput').value.trim();
+            if (!movie) return;
+
+            // Hide previous results
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('autocomplete').style.display = 'none';
+
+            fetch('/recommend', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'movie=' + encodeURIComponent(movie)
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.error) {
+                    document.getElementById('errorMessage').textContent = data.error;
+                    if (data.suggestions) {
+                        document.getElementById('suggestions').innerHTML = data.suggestions.map(s =>
+                            `<button onclick="searchSpecific('${s}')">${s}</button>`
+                        ).join('');
+                    }
+                    document.getElementById('error').style.display = 'block';
+                } else {
+                    if (data.corrected) {
+                        document.getElementById('correction').innerHTML =
+                            `Showing results for <strong>"${data.corrected}"</strong> (you searched for "${data.original}")`;
+                    } else {
+                        document.getElementById('correction').innerHTML = '';
+                    }
+
+                    document.getElementById('recommendations').innerHTML = data.movies.map(m => `
+                        <div class="movie-card">
+                            <div class="movie-header">
+                                <h3>${m.title} <span class="year">(${m.year})</span></h3>
+                                <span class="similarity">${m.similarity}</span>
+                            </div>
+                            <div class="movie-details">
+                                <p><span>Director:</span> ${m.director}</p>
+                                <p><span>Genre:</span> ${m.genre}</p>
+                                <p><span>Rating:</span> ⭐ ${m.rating}</p>
+                                <p><span>Cast:</span> ${m.cast}</p>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('results').style.display = 'block';
+                }
+            });
+        }
+
+        // Close autocomplete on outside click
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#movieInput') && !e.target.closest('#autocomplete')) {
+                document.getElementById('autocomplete').style.display = 'none';
+            }
+        });
+
+        // Enter key
+        document.getElementById('movieInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchMovie();
+        });
+    </script>
+</body>
+</html>
